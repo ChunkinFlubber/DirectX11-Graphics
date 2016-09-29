@@ -4,7 +4,7 @@
 #include "..\Common\DeviceResources.h"
 #include "..\Common\StepTimer.h"
 
-namespace GX2Project
+namespace DX11UWA
 {
 	// Renders the current FPS value in the bottom right corner of the screen using Direct2D and DirectWrite.
 	class SampleFpsTextRenderer

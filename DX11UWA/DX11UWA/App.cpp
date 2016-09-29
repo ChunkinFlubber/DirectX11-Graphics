@@ -3,7 +3,7 @@
 
 #include <ppltasks.h>
 
-using namespace GX2Project;
+using namespace DX11UWA;
 
 using namespace concurrency;
 using namespace Windows::ApplicationModel;
@@ -14,8 +14,6 @@ using namespace Windows::UI::Input;
 using namespace Windows::System;
 using namespace Windows::Foundation;
 using namespace Windows::Graphics::Display;
-
-CoreWindow^ gwindow = nullptr;
 
 // The main function is only used to initialize our IFrameworkView class.
 [Platform::MTAThread]
@@ -31,10 +29,12 @@ IFrameworkView^ Direct3DApplicationSource::CreateView()
 	return ref new App();
 }
 
-App::App() :
+App::App(void) :
 	m_windowClosed(false),
 	m_windowVisible(true)
 {
+	memset(kb_buttons, 0, sizeof(kb_buttons));
+	current_mpos = nullptr;
 }
 
 // The first method called when the IFrameworkView is being created.
@@ -59,7 +59,6 @@ void App::Initialize(CoreApplicationView^ applicationView)
 // Called when the CoreWindow object is created (or re-created).
 void App::SetWindow(CoreWindow^ window)
 {
-	gwindow = window;
 	window->SizeChanged += 
 		ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>(this, &App::OnWindowSizeChanged);
 
@@ -80,23 +79,24 @@ void App::SetWindow(CoreWindow^ window)
 	DisplayInformation::DisplayContentsInvalidated +=
 		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
 
-	window->PointerPressed +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerPressed);
-
-	window->PointerReleased +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerReleased);
-
-	window->PointerMoved +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerMoved);
-
 	window->KeyDown +=
-		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyDown);
+		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnButtonDown);
 
 	window->KeyUp +=
-		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyUp);
+		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnButtonUp);
+
+	window->PointerPressed +=
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseButtonDown);
+
+	window->PointerReleased +=
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseButtonUp);
+
+	window->PointerMoved +=
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseMove);
 
 	window->PointerExited +=
-		ref new Windows::Foundation::TypedEventHandler<Windows::UI::Core::CoreWindow ^, Windows::UI::Core::PointerEventArgs ^>(this, &GX2Project::App::OnPointerExited);
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseExit);
+
 
 	m_deviceResources->SetWindow(window);
 }
@@ -106,12 +106,12 @@ void App::Load(Platform::String^ entryPoint)
 {
 	if (m_main == nullptr)
 	{
-		m_main = std::unique_ptr<GX2ProjectMain>(new GX2ProjectMain(m_deviceResources));
+		m_main = std::unique_ptr<DX11UWAMain>(new DX11UWAMain(m_deviceResources));
 	}
 }
 
 // This method is called after the window becomes active.
-void App::Run()
+void App::Run(void)
 {
 	while (!m_windowClosed)
 	{
@@ -119,6 +119,8 @@ void App::Run()
 		{
 			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
 
+			m_main->GetKeyboardButtons(SendKeyboardButtons());
+			m_main->GetMousePos(SendMousePos());
 			m_main->Update();
 
 			if (m_main->Render())
@@ -136,96 +138,11 @@ void App::Run()
 // Required for IFrameworkView.
 // Terminate events do not cause Uninitialize to be called. It will be called if your IFrameworkView
 // class is torn down while the app is in the foreground.
-void App::Uninitialize()
+void App::Uninitialize(void)
 {
 }
 
 // Application lifecycle event handlers.
-bool mouse_move = false;
-float diffx = 0;
-float diffy = 0;
-bool left_click = false;
-
-void App::OnPointerPressed(CoreWindow^ sender, PointerEventArgs^ args)
-{
-	diffx = 0;
-	diffy = 0;
-	left_click = true;
-	mouse_move = true;
-}
-
-void App::OnPointerReleased(CoreWindow^ sender, PointerEventArgs^ args)
-{
-	diffx = 0;
-	diffy = 0;
-	left_click = false;
-	mouse_move = true;
-}
-
-void App::OnPointerMoved(CoreWindow^ sender, PointerEventArgs^ args)
-{
-	mouse_move = true;
-	float X = args->CurrentPoint->Position.X;
-	float Y = args->CurrentPoint->Position.Y;
-	static float prevX = X;
-	static float prevY = Y;
-	diffx = X - prevX;
-	diffy = Y - prevY;
-	prevX = X;
-	prevY = Y;
-}
-
-/*This function needs to be implimented on Desktop as to prevent a problem where mouse released event doesn't trigger*/
-void GX2Project::App::OnPointerExited(Windows::UI::Core::CoreWindow ^sender, Windows::UI::Core::PointerEventArgs ^args)
-{
-	diffx = 0;
-	diffy = 0;
-	left_click = false;
-	mouse_move = false;
-}
-
-bool w_down = false;
-bool a_down = false;
-bool s_down = false;
-bool d_down = false;
-
-char buttons[256] = {};
-
-void GX2Project::App::OnKeyDown(Windows::UI::Core::CoreWindow ^ sender, Windows::UI::Core::KeyEventArgs ^ args)
-{
-
-	buttons[(unsigned int)args->VirtualKey] = true;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::W)
-		w_down = true;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::A)
-		a_down = true;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::S)
-		s_down = true;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::D)
-		d_down = true;
-}
-
-void GX2Project::App::OnKeyUp(Windows::UI::Core::CoreWindow ^ sender, Windows::UI::Core::KeyEventArgs ^ args)
-{
-
-	buttons[(unsigned int)args->VirtualKey] = false;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::W)
-		w_down = false;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::A)
-		a_down = false;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::S)
-		s_down = false;
-
-	if (args->VirtualKey == Windows::System::VirtualKey::D)
-		d_down = false;
-}
 
 void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^ args)
 {
@@ -299,4 +216,46 @@ void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)
 void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
 {
 	m_deviceResources->ValidateDevice();
+}
+
+void App::OnButtonUp(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args)
+{
+	kb_buttons[(UINT)args->VirtualKey] = false;
+}
+
+void App::OnButtonDown(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args)
+{
+	kb_buttons[(UINT)args->VirtualKey] = true;
+}
+
+void App::OnMouseButtonDown(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+{
+	current_mpos = args->CurrentPoint;
+}
+
+void App::OnMouseButtonUp(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+{
+	current_mpos = args->CurrentPoint;
+}
+
+void App::OnMouseMove(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+{
+	current_mpos = args->CurrentPoint;
+}
+
+void App::OnMouseExit(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+{
+	//throw ref new Platform::NotImplementedException();
+}
+
+char* App::SendKeyboardButtons(void)
+{
+	return kb_buttons;
+}
+
+Windows::UI::Input::PointerPoint^ App::SendMousePos(void)
+{
+	//throw ref new Platform::NotImplementedException();
+	// TODO: insert return statement here
+	return current_mpos;
 }

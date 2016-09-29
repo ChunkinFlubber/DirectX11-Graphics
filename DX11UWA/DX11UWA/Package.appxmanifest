@@ -7,15 +7,15 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="bd38be8e-52ff-46ce-84ed-358d3193e48f"
-    Publisher="CN=ChunkinFlubber"
+    Name="54014835-9bba-472b-bf12-b7d15c2fdce2"
+    Publisher="CN=Dan"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="bd38be8e-52ff-46ce-84ed-358d3193e48f" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="54014835-9bba-472b-bf12-b7d15c2fdce2" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>GX2Project</DisplayName>
-    <PublisherDisplayName>ChunkinFlubber</PublisherDisplayName>
+    <DisplayName>DX11UWA</DisplayName>
+    <PublisherDisplayName>Dan</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -30,12 +30,12 @@
   <Applications>
     <Application Id="App"
       Executable="$targetnametoken$.exe"
-      EntryPoint="GX2Project.App">
+      EntryPoint="DX11UWA.App">
       <uap:VisualElements
-        DisplayName="GX2Project"
+        DisplayName="DX11UWA"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
-        Description="GX2Project"
+        Description="DX11UWA"
         BackgroundColor="transparent">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
