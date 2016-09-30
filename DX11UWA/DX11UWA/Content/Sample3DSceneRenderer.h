@@ -31,6 +31,8 @@ namespace DX11UWA
 
 	private:
 		void Rotate(float radians);
+		void Orbit(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 radians, XMFLOAT3 orbitpos, XMFLOAT3 orbitness);
+		void Static(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos);
 		void UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
 
 	private:

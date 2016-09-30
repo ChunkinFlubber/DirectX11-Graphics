@@ -63,19 +63,52 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources(void)
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtLH(eye, at, up)));
 }
 
+XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT4 vect)
+{
+	XMFLOAT4 out;
+	out.x = matrix._11 * vect.x + matrix._12 * vect.y + matrix._13 * vect.z + matrix._14 * vect.w;
+	out.y = matrix._21 * vect.x + matrix._22 * vect.y + matrix._23 * vect.z + matrix._24 * vect.w;
+	out.z = matrix._31 * vect.x + matrix._32 * vect.y + matrix._33 * vect.z + matrix._34 * vect.w;
+	out.w = matrix._41 * vect.x + matrix._42 * vect.y + matrix._43 * vect.z + matrix._44 * vect.w;
+	return out;
+}
+
+XMFLOAT4 LookAt(XMFLOAT4 pos, XMFLOAT4 look)
+{
+	XMFLOAT4 out;
+	out.x = look.x - pos.x;
+	out.y = look.y - pos.y;
+	out.z = look.z - pos.z;
+	out.w = look.w - pos.w;
+	return out;
+}
+
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 {
+	float Oradians = 1;
 	if (!m_tracking)
 	{
 		// Convert degrees to radians, then convert seconds to rotation angle
 		float radiansPerSecond = XMConvertToRadians(m_degreesPerSecond);
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
-
-		Rotate(radians);
+		Oradians = radians;
+		Orbit(m_constantBufferData,XMFLOAT3(0,0, radians), XMFLOAT3(0, 0, 0), XMFLOAT3(3, 8, 0));
 	}
-
+	//set pos of static objects
+	Static(scene.models[0].m_constantBufferData, scene.models[0].offset);
+	Static(scene.models[1].m_constantBufferData, scene.models[1].offset);
+	Static(scene.models[4].m_constantBufferData, scene.models[4].offset);
+	//make ball and cone obit
+	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
+	Orbit(scene.models[3].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[3].offset);
+	//attach lights to ball and cone
+	scene.pointlight.pos = MatrixByVector(scene.models[2].m_constantBufferData.model, scene.constPointPos);
+	scene.spotlight.pos = MatrixByVector(scene.models[3].m_constantBufferData.model, scene.constspotPos);
+	scene.dirlight.dir = LookAt(MatrixByVector(m_constantBufferData.model, XMFLOAT4(3, 8, 0, 0)), XMFLOAT4(0, 0, 0, 0));
+	//redirect spotlight
+	scene.spotlight.coneDir = LookAt(scene.spotlight.pos, XMFLOAT4(0, 0, 0, 0));
 
 	// Update or move camera here
 	UpdateCamera(timer, 2.5f, 1.75f);
@@ -86,7 +119,19 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 void Sample3DSceneRenderer::Rotate(float radians)
 {
 	// Prepare to pass the updated model matrix to the shader
-	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
+	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians) * XMMatrixTranslation(0,3,0)));
+}
+
+void Sample3DSceneRenderer::Static(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos)
+{
+	// Prepare to pass the updated model matrix to the shader
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)));
+}
+
+void Sample3DSceneRenderer::Orbit(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 radians, XMFLOAT3 orbitpos, XMFLOAT3 orbitness)
+{
+	// Prepare to pass the updated model matrix to the shader
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(orbitness.x, orbitness.y, orbitness.z) * (XMMatrixRotationX(radians.x) * XMMatrixRotationY(radians.y) * XMMatrixRotationZ(radians.z)) * XMMatrixTranslation(orbitpos.x,orbitpos.y,orbitpos.z)));
 }
 
 void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd)
@@ -256,8 +301,9 @@ void Sample3DSceneRenderer::Render(void)
 	// Each vertex is one instance of the VertexPositionColor struct.
 	for (unsigned int i = 0; i < scene.models.size(); ++i)
 	{
-		scene.models[i].m_constantBufferData = m_constantBufferData;
-		XMStoreFloat4x4(&scene.models[i].m_constantBufferData.model, XMMatrixTranspose(XMMatrixTranslation(scene.models[i].offset.x, scene.models[i].offset.y, scene.models[i].offset.z)));
+		scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
+		scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
+		//XMStoreFloat4x4(&scene.models[i].m_constantBufferData.model, XMMatrixTranspose(XMMatrixTranslation(scene.models[i].offset.x, scene.models[i].offset.y, scene.models[i].offset.z)));
 		context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &scene.models[i].m_constantBufferData, 0, 0, 0);
 		stride = sizeof(VERTEX);
 		offset = 0;
@@ -375,9 +421,15 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 	Object plane;
 	Object monkey;
+	Object ball;
+	Object cone;
+	Object ball2;
 	scene.models.push_back(plane);
 	scene.models.push_back(monkey);
-	
+	scene.models.push_back(ball);
+	scene.models.push_back(cone);
+	scene.models.push_back(ball2);
+
 	CD3D11_BUFFER_DESC DirconstantBufferDesc(sizeof(DIRECTOIONALLIGHT), D3D11_BIND_CONSTANT_BUFFER);
 	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&DirconstantBufferDesc, nullptr, &scene.m_dirConstBuffer));
 	CD3D11_BUFFER_DESC PointconstantBufferDesc(sizeof(POINTLIGHT), D3D11_BIND_CONSTANT_BUFFER);
@@ -405,16 +457,16 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &scene.m_SamplerState));
 
 	scene.dirlight.dir = XMFLOAT4(-0.5, -0.5, 0, 0);
-	scene.dirlight.color = XMFLOAT4(0.5, 0.5, 0, 0);
+	scene.dirlight.color = XMFLOAT4(0.65, 0.65, 0.65, 0);
 	scene.dirlight.ambientlight = XMFLOAT4(0.1, 0.1, 0.1, 0);
 
-	scene.pointlight.pos = XMFLOAT4(0, 0, -3, 0);
-	scene.pointlight.color = XMFLOAT4(0.0, 0.0, 0.9, 0);
-	scene.pointlight.radious = XMFLOAT4(30, 1, 0, 0);
+	scene.pointlight.pos = scene.constPointPos = XMFLOAT4(0, 0, -3, 0);
+	scene.pointlight.color = XMFLOAT4(0.0, 0.0, 1.0, 0);
+	scene.pointlight.radious = XMFLOAT4(3.7, 3, 0, 0);
 
-	scene.spotlight.pos = XMFLOAT4(0, 0, 3, 0);
-	scene.spotlight.color = XMFLOAT4(0.49, 0, 0.28, 0);
-	scene.spotlight.coneRat = XMFLOAT4(0.7708, 0.7966, 0, 0);
+	scene.spotlight.pos = scene.constspotPos = XMFLOAT4(0, 0, 3, 0);
+	scene.spotlight.color = XMFLOAT4(1.0, 0, 0, 0);
+	scene.spotlight.coneRat = XMFLOAT4(0.7708, 0.9856, 100, 0);
 	scene.spotlight.coneDir = XMFLOAT4(0, 0, -1, 0);
 
 	
@@ -492,6 +544,79 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/grey.dds", NULL, &scene.models[1].m_texture);
 		}
 	});
+
+	auto BallcreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[2].loadOBJ("Assets/Ball.obj"))
+		{
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[2].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[2].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[2].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[2].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[2].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[2].m_indexBuffer));
+			scene.models[2].offset = XMFLOAT3(0, 0, -3);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/blue.dds", NULL, &scene.models[2].m_texture);
+		}
+	});
+
+	auto ConecreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[3].loadOBJ("Assets/Cone.obj"))
+		{
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[3].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[3].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[3].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[3].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[3].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[3].m_indexBuffer));
+			scene.models[3].offset = XMFLOAT3(0, 0, 3);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Red.dds", NULL, &scene.models[3].m_texture);
+		}
+	});
+
+	auto Ball2createCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[4].loadOBJ("Assets/Ball.obj"))
+		{
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[4].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[4].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[4].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[4].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[4].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[4].m_indexBuffer));
+			scene.models[4].offset = XMFLOAT3(0, 6, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/blue.dds", NULL, &scene.models[4].m_texture);
+		}
+	});
+
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources(void)

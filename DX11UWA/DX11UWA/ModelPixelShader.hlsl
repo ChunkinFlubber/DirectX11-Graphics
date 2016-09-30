@@ -11,6 +11,7 @@ struct PixelShaderInput
 	float4 pos : SV_POSITION;
 	float3 uv : UV;
 	float3 normals : NORMAL;
+	float3 normalsw : WORLDNORM;
 	float3 posw : WORLDPOS;
 };
 
@@ -41,21 +42,21 @@ float4 main(PixelShaderInput input) : SV_TARGET
 {
 	//return float4(input.uv, 1.0f);
 	float4 baseColor = Texture.Sample(Sampler, input.uv);// * modulate; // get base color
-	float d_r = saturate(dot(-dir_dir.xyz,input.normals));
+	float d_r = saturate(dot(-dir_dir.xyz,input.normalsw));
 	float3 dirlight = baseColor.xyz * dir_color.xyz * d_r;
 
-	float3 p_d = saturate(normalize(point_pos.xyz - input.posw));
-	float p_r = saturate(dot(p_d, input.normals));
-	float p_atten = 1 - saturate(length(point_pos.xyz - input.posw.xyz) / (point_radious.x * point_radious.y));
+	float3 p_d = normalize(point_pos.xyz - input.posw);
+	float p_r = saturate(dot(p_d, input.normalsw));
+	float p_atten = 1 - saturate(length(point_pos.xyz - input.posw.xyz) / point_radious.x);
 	float3 pointlight = point_color.xyz * baseColor.xyz * p_r * p_atten;
 
-	float3 s_d = saturate(normalize(spot_pos.xyz - input.posw));
-	float s_sr = saturate(dot(-s_d, normalize(spot_coneD)));
+	float3 s_d = normalize(spot_pos.xyz - input.posw);
+	float s_sr = saturate(dot(-s_d.xyz, normalize(spot_coneD).xyz));
 	float s_sf = (s_sr > spot_coneR.x) ? 1 : 0;
-	float s_r = saturate(dot(s_d, input.normals));
-	float s_atten = 1.0 - saturate(length(spot_pos.xyz - input.posw.xyz) / spot_coneR.x);
-	float s_coneatten = 1.0 - saturate((spot_coneR.x - s_sr) / (spot_coneR.x - spot_coneR.y));
-	float3 spotlight = spot_color.xyz * baseColor.xyz * s_r * s_sf * s_atten * s_coneatten;
+	float s_r = saturate(dot(s_d, input.normalsw));
+	float s_atten = 1.0 - saturate(length(spot_pos.xyz - input.posw.xyz) / spot_coneR.z);
+	float s_coneatten = 1.0 - saturate((spot_coneR.y - s_sr) / (spot_coneR.y - spot_coneR.x));
+	float3 spotlight = spot_color.xyz * baseColor.xyz * s_r * s_sf * (s_atten * s_coneatten);
 
 	baseColor.xyz = saturate(dirlight.xyz + pointlight.xyz + ambiantlight.xyz + spotlight.xyz);
 	//float4 detailColor = detailTexture.Sample(filters[1], detailUV); // get detail effect

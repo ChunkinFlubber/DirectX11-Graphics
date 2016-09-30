@@ -20,6 +20,7 @@ struct PixelShaderInput
 	float4 pos : SV_POSITION;
 	float3 uv : UV;
 	float3 normals : NORMAL;
+	float3 normalsw : WORLDNORM;
 	float3 posw : WORLDPOS;
 };
 
@@ -32,6 +33,7 @@ PixelShaderInput main(VertexShaderInput input)
 	// Transform the vertex position into projected space.
 	pos = mul(pos, model);
 	output.posw = pos.xyz;
+	output.normalsw = normalize(mul(input.normals, model));
 	pos = mul(pos, view);
 	pos = mul(pos, projection);
 	output.pos = pos;

@@ -16,6 +16,8 @@ public:
 	DX11UWA::DIRECTOIONALLIGHT dirlight;
 	DX11UWA::POINTLIGHT pointlight;
 	DX11UWA::SPOTLIGHT spotlight;
+	XMFLOAT4 constPointPos;
+	XMFLOAT4 constspotPos;
 	bool Render();
 	bool SetUp();
 };
