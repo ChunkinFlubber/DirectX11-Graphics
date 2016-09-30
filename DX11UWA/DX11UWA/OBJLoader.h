@@ -18,7 +18,9 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
 	DX11UWA::ModelViewProjectionConstantBuffer	m_constantBufferData;
-	XMFLOAT3 offset;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>	m_texture = nullptr;
+
+	XMFLOAT3									offset;
 
 	vector<DX11UWA::VERTEX> verts;
 	vector<unsigned int> indexed;

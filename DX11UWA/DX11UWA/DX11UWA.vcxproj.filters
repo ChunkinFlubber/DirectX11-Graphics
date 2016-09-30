@@ -73,6 +73,9 @@
     <ClCompile Include="Scene.cpp">
       <Filter>Content\Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\Project Instructions\Step 7 - Take a look at Project Resources &amp; Helpers\Texture Loading Help\DDSTextureLoader.cpp">
+      <Filter>Content\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Content\Sample3DSceneRenderer.h">
@@ -111,9 +114,21 @@
     <ClInclude Include="Scene.h">
       <Filter>Content\Headers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\Project Instructions\Step 7 - Take a look at Project Resources &amp; Helpers\Texture Loading Help\DDSTextureLoader.h">
+      <Filter>Content\Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Red.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\grey.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\tiles.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -122,6 +137,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DX11UWA_TemporaryKey.pfx" />
+    <None Include="Assets\Plane.obj" />
+    <None Include="Assets\Monkey.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SamplePixelShader.hlsl">
@@ -136,13 +153,5 @@
     <FxCompile Include="ModelVertexShader.hlsl">
       <Filter>Content\Shaders</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="Assets\Plane.obj">
-      <Filter>Assets</Filter>
-    </Object>
-    <Object Include="Assets\Monkey.obj">
-      <Filter>Assets</Filter>
-    </Object>
   </ItemGroup>
 </Project>

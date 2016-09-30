@@ -70,7 +70,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	{
 		// Convert degrees to radians, then convert seconds to rotation angle
 		float radiansPerSecond = XMConvertToRadians(m_degreesPerSecond);
-		double totalRotation = 1; //timer.GetTotalSeconds() * radiansPerSecond
+		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
 
 		Rotate(radians);
@@ -241,7 +241,15 @@ void Sample3DSceneRenderer::Render(void)
 	//////////////////////////////RENDER PLANE
 	context->VSSetShader(scene.m_vertexShader.Get(), nullptr, 0);
 	context->PSSetShader(scene.m_pixelShader.Get(), nullptr, 0);
+	context->PSSetSamplers(0, 1, scene.m_SamplerState.GetAddressOf());
 	context->IASetInputLayout(scene.m_inputLayout.Get());
+
+	context->PSSetConstantBuffers1(0, 1, scene.m_dirConstBuffer.GetAddressOf(), nullptr, nullptr);
+	context->UpdateSubresource1(scene.m_dirConstBuffer.Get(), 0, NULL, &scene.dirlight, 0, 0, 0);
+	context->PSSetConstantBuffers1(1, 1, scene.m_pointConstBuffer.GetAddressOf(), nullptr, nullptr);
+	context->UpdateSubresource1(scene.m_pointConstBuffer.Get(), 0, NULL, &scene.pointlight, 0, 0, 0);
+	context->PSSetConstantBuffers1(2, 1, scene.m_spotConstBuffer.GetAddressOf(), nullptr, nullptr);
+	context->UpdateSubresource1(scene.m_spotConstBuffer.Get(), 0, NULL, &scene.spotlight, 0, 0, 0);
 
 	// Prepare the constant buffer to send it to the graphics device.
 	//context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
@@ -260,6 +268,7 @@ void Sample3DSceneRenderer::Render(void)
 		// Attach our vertex shader.
 		// Send the constant buffer to the graphics device.
 		context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+		context->PSSetShaderResources(0, 1, scene.models[i].m_texture.GetAddressOf());
 		// Attach our pixel shader.
 		// Draw the objects.
 		context->DrawIndexed(scene.models[i].indexed.size(), 0, 0);
@@ -369,13 +378,53 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	scene.models.push_back(plane);
 	scene.models.push_back(monkey);
 	
+	CD3D11_BUFFER_DESC DirconstantBufferDesc(sizeof(DIRECTOIONALLIGHT), D3D11_BIND_CONSTANT_BUFFER);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&DirconstantBufferDesc, nullptr, &scene.m_dirConstBuffer));
+	CD3D11_BUFFER_DESC PointconstantBufferDesc(sizeof(POINTLIGHT), D3D11_BIND_CONSTANT_BUFFER);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&PointconstantBufferDesc, nullptr, &scene.m_pointConstBuffer));
+	CD3D11_BUFFER_DESC SpotconstantBufferDesc(sizeof(SPOTLIGHT), D3D11_BIND_CONSTANT_BUFFER);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&SpotconstantBufferDesc, nullptr, &scene.m_spotConstBuffer));
+
+	D3D11_SAMPLER_DESC samplerDesc;
+	ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
+
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.BorderColor[0] = 1.0f;
+	samplerDesc.BorderColor[1] = 1.0f;
+	samplerDesc.BorderColor[2] = 1.0f;
+	samplerDesc.BorderColor[3] = 1.0f;
+	samplerDesc.MinLOD = -FLT_MAX;
+	samplerDesc.MaxLOD = FLT_MAX;
+
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &scene.m_SamplerState));
+
+	scene.dirlight.dir = XMFLOAT4(-0.5, -0.5, 0, 0);
+	scene.dirlight.color = XMFLOAT4(0.5, 0.5, 0, 0);
+	scene.dirlight.ambientlight = XMFLOAT4(0.1, 0.1, 0.1, 0);
+
+	scene.pointlight.pos = XMFLOAT4(0, 0, -3, 0);
+	scene.pointlight.color = XMFLOAT4(0.0, 0.0, 0.9, 0);
+	scene.pointlight.radious = XMFLOAT4(30, 1, 0, 0);
+
+	scene.spotlight.pos = XMFLOAT4(0, 0, 3, 0);
+	scene.spotlight.color = XMFLOAT4(0.49, 0, 0.28, 0);
+	scene.spotlight.coneRat = XMFLOAT4(0.7708, 0.7966, 0, 0);
+	scene.spotlight.coneDir = XMFLOAT4(0, 0, -1, 0);
+
+	
 
 	// Load shaders asynchronously.
-	auto PlaneloadVSTask = DX::ReadDataAsync(L"ModelVertexShader.cso");
-	auto PlaneloadPSTask = DX::ReadDataAsync(L"ModelPixelShader.cso");
+	auto SceneloadVSTask = DX::ReadDataAsync(L"ModelVertexShader.cso");
+	auto SceneloadPSTask = DX::ReadDataAsync(L"ModelPixelShader.cso");
 
 	// After the vertex shader file is loaded, create the shader and input layout.
-	auto ScenecreateVSTask = loadVSTask.then([this](const std::vector<byte>& fileData)
+	auto ScenecreateVSTask = SceneloadVSTask.then([this](const std::vector<byte>& fileData)
 	{
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &scene.m_vertexShader));
 
@@ -383,14 +432,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "NOMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(PlanevertexDesc, ARRAYSIZE(PlanevertexDesc), &fileData[0], fileData.size(), &scene.m_inputLayout));
 	});
 
 	// After the pixel shader file is loaded, create the shader and constant buffer.
-	auto ScenecreatePSTask = loadPSTask.then([this](const std::vector<byte>& fileData)
+	auto ScenecreatePSTask = SceneloadPSTask.then([this](const std::vector<byte>& fileData)
 	{
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &scene.m_pixelShader));
 	});
@@ -414,7 +463,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[0].indexed.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[0].m_indexBuffer));
-			scene.models[0].offset = XMFLOAT3(0, -0.5, 0);
+			scene.models[0].offset = XMFLOAT3(0, -1.37, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/tiles.dds", NULL, scene.models[0].m_texture.GetAddressOf());
 		}
 	});
 
@@ -436,7 +487,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[1].indexed.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[1].m_indexBuffer));
-			scene.models[1].offset = XMFLOAT3(4, 2.6, 0);
+			scene.models[1].offset = XMFLOAT3(0, 0, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/grey.dds", NULL, &scene.models[1].m_texture);
 		}
 	});
 }

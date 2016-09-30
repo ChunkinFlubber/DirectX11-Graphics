@@ -30,4 +30,26 @@ namespace DX11UWA
 		DirectX::XMFLOAT2 uvs;
 		DirectX::XMFLOAT3 normals;
 	};
+
+	struct DIRECTOIONALLIGHT
+	{
+		DirectX::XMFLOAT4 dir;
+		DirectX::XMFLOAT4 color;
+		DirectX::XMFLOAT4 ambientlight;
+	};
+
+	struct POINTLIGHT
+	{
+		DirectX::XMFLOAT4 pos;
+		DirectX::XMFLOAT4 color;
+		DirectX::XMFLOAT4 radious;
+	};
+
+	struct SPOTLIGHT
+	{
+		DirectX::XMFLOAT4 pos;
+		DirectX::XMFLOAT4 color;
+		DirectX::XMFLOAT4 coneRat;
+		DirectX::XMFLOAT4 coneDir;
+	};
 }
