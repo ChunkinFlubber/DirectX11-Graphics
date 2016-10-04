@@ -100,8 +100,13 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	Static(scene.models[0].m_constantBufferData, scene.models[0].offset);
 	Static(scene.models[1].m_constantBufferData, scene.models[1].offset);
 	Static(scene.models[4].m_constantBufferData, scene.models[4].offset);
+	Static(scene.models[5].m_constantBufferData, scene.models[5].offset);
+	Static(scene.models[6].m_constantBufferData, scene.models[6].offset);
+	Static(scene.models[7].m_constantBufferData, scene.models[7].offset);
+	Static(scene.models[8].m_constantBufferData, scene.models[8].offset);
+	//Orbit(scene.models[6].m_constantBufferData, XMFLOAT3(0,Oradians,0),scene.models[6].offset, XMFLOAT3(0,0,0));
 	//make ball and cone obit
-	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
+	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians + tan(timer.GetTotalSeconds()), 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
 	Orbit(scene.models[3].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[3].offset);
 	//attach lights to ball and cone
 	scene.pointlight.pos = MatrixByVector(scene.models[2].m_constantBufferData.model, scene.constPointPos);
@@ -111,7 +116,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	scene.spotlight.coneDir = LookAt(scene.spotlight.pos, XMFLOAT4(0, 0, 0, 0));
 
 	// Update or move camera here
-	UpdateCamera(timer, 2.5f, 1.75f);
+	UpdateCamera(timer, 7.0f, 1.75f);
 
 }
 
@@ -283,7 +288,8 @@ void Sample3DSceneRenderer::Render(void)
 	// Draw the objects.
 	context->DrawIndexed(m_indexCount, 0, 0);
 
-	//////////////////////////////RENDER PLANE
+	//////////////////////////////RENDER My Stuff
+
 	context->VSSetShader(scene.m_vertexShader.Get(), nullptr, 0);
 	context->PSSetShader(scene.m_pixelShader.Get(), nullptr, 0);
 	context->PSSetSamplers(0, 1, scene.m_SamplerState.GetAddressOf());
@@ -296,27 +302,23 @@ void Sample3DSceneRenderer::Render(void)
 	context->PSSetConstantBuffers1(2, 1, scene.m_spotConstBuffer.GetAddressOf(), nullptr, nullptr);
 	context->UpdateSubresource1(scene.m_spotConstBuffer.Get(), 0, NULL, &scene.spotlight, 0, 0, 0);
 
-	// Prepare the constant buffer to send it to the graphics device.
-	//context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
-	// Each vertex is one instance of the VertexPositionColor struct.
 	for (unsigned int i = 0; i < scene.models.size(); ++i)
 	{
 		scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
 		scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
-		//XMStoreFloat4x4(&scene.models[i].m_constantBufferData.model, XMMatrixTranspose(XMMatrixTranslation(scene.models[i].offset.x, scene.models[i].offset.y, scene.models[i].offset.z)));
 		context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &scene.models[i].m_constantBufferData, 0, 0, 0);
+
 		stride = sizeof(VERTEX);
 		offset = 0;
 		context->IASetVertexBuffers(0, 1, scene.models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
-		// Each index is one 16-bit unsigned integer (short).
+
 		context->IASetIndexBuffer(scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		// Attach our vertex shader.
-		// Send the constant buffer to the graphics device.
+
 		context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
 		context->PSSetShaderResources(0, 1, scene.models[i].m_texture.GetAddressOf());
-		// Attach our pixel shader.
-		// Draw the objects.
+		context->PSSetShaderResources(1, 1, scene.models[i].m_normalMap.GetAddressOf());
+
 		context->DrawIndexed(scene.models[i].indexed.size(), 0, 0);
 	}
 
@@ -417,18 +419,26 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		m_loadingComplete = true;
 	});
 
-	//////////////////////////////////////////////////////////////Load PLANE
+	//////////////////////////////////////////////////////////////Load My Stuff
 
 	Object plane;
 	Object monkey;
 	Object ball;
 	Object cone;
 	Object ball2;
+	Object gun;
+	Object m4;
+	Object cobble;
+	Object moon;
 	scene.models.push_back(plane);
 	scene.models.push_back(monkey);
 	scene.models.push_back(ball);
 	scene.models.push_back(cone);
 	scene.models.push_back(ball2);
+	scene.models.push_back(gun);
+	scene.models.push_back(m4);
+	scene.models.push_back(cobble);
+	scene.models.push_back(moon);
 
 	CD3D11_BUFFER_DESC DirconstantBufferDesc(sizeof(DIRECTOIONALLIGHT), D3D11_BIND_CONSTANT_BUFFER);
 	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&DirconstantBufferDesc, nullptr, &scene.m_dirConstBuffer));
@@ -444,7 +454,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MipLODBias = 1.0f;
 	samplerDesc.MaxAnisotropy = 1;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	samplerDesc.BorderColor[0] = 1.0f;
@@ -457,19 +467,17 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &scene.m_SamplerState));
 
 	scene.dirlight.dir = XMFLOAT4(-0.5, -0.5, 0, 0);
-	scene.dirlight.color = XMFLOAT4(0.65, 0.65, 0.65, 0);
-	scene.dirlight.ambientlight = XMFLOAT4(0.1, 0.1, 0.1, 0);
+	scene.dirlight.color = XMFLOAT4(0.35, 0.35, 0.35, 0);
+	scene.dirlight.ambientlight = XMFLOAT4(0.00, 0.00, 0.00, 0);
 
 	scene.pointlight.pos = scene.constPointPos = XMFLOAT4(0, 0, -3, 0);
 	scene.pointlight.color = XMFLOAT4(0.0, 0.0, 1.0, 0);
 	scene.pointlight.radious = XMFLOAT4(3.7, 3, 0, 0);
 
 	scene.spotlight.pos = scene.constspotPos = XMFLOAT4(0, 0, 3, 0);
-	scene.spotlight.color = XMFLOAT4(1.0, 0, 0, 0);
-	scene.spotlight.coneRat = XMFLOAT4(0.7708, 0.9856, 100, 0);
+	scene.spotlight.color = XMFLOAT4(0.56, 0.56, 0.56, 0);
+	scene.spotlight.coneRat = XMFLOAT4(0.7708, 0.7956, 10, 0);
 	scene.spotlight.coneDir = XMFLOAT4(0, 0, -1, 0);
-
-	
 
 	// Load shaders asynchronously.
 	auto SceneloadVSTask = DX::ReadDataAsync(L"ModelVertexShader.cso");
@@ -485,6 +493,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TAN", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "BI", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "UNM", 0, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(PlanevertexDesc, ARRAYSIZE(PlanevertexDesc), &fileData[0], fileData.size(), &scene.m_inputLayout));
@@ -501,7 +512,16 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	{
 		if (scene.models[0].loadOBJ("Assets/Plane.obj"))
 		{
+			XMFLOAT3 tan;
+			XMFLOAT3 bi;
 
+			scene.models[0].CalculateTangentBinormal(scene.models[0].verts[scene.models[0].indexed[0]], scene.models[0].verts[scene.models[0].indexed[1]], scene.models[0].verts[scene.models[0].indexed[2]], tan, bi);
+			for (int i = 0; i < scene.models[0].verts.size(); ++i)
+			{
+				scene.models[0].verts[i].tan = tan;
+				scene.models[0].verts[i].Bi = bi;
+				scene.models[0].verts[i].useNormalMap = 1.0f;
+			}
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = scene.models[0].verts.data();
 			vertexBufferData.SysMemPitch = 0;
@@ -518,6 +538,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			scene.models[0].offset = XMFLOAT3(0, -1.37, 0);
 
 			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/tiles.dds", NULL, scene.models[0].m_texture.GetAddressOf());
+			HRESULT hs2 = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/tiles_NRM.dds", NULL, scene.models[0].m_normalMap.GetAddressOf());
+
+			
 		}
 	});
 
@@ -614,6 +637,168 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			scene.models[4].offset = XMFLOAT3(0, 6, 0);
 
 			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/blue.dds", NULL, &scene.models[4].m_texture);
+		}
+	});
+
+	auto GuncreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[5].loadOBJ("Assets/Handgun_obj.obj"))
+		{
+			XMFLOAT3 tan;
+			XMFLOAT3 bi;
+
+			for (int i = 0; i < scene.models[5].indexed.size(); i += 3)
+			{
+				scene.models[5].CalculateTangentBinormal(scene.models[5].verts[scene.models[5].indexed[i]], scene.models[5].verts[scene.models[5].indexed[i + 1]], scene.models[5].verts[scene.models[5].indexed[i + 2]], tan, bi);
+				scene.models[5].verts[scene.models[5].indexed[i]].tan = tan;
+				scene.models[5].verts[scene.models[5].indexed[i]].Bi = bi;
+				scene.models[5].verts[scene.models[5].indexed[i]].useNormalMap = 1.0f;
+				scene.models[5].verts[scene.models[5].indexed[i + 1]].tan = tan;
+				scene.models[5].verts[scene.models[5].indexed[i + 1]].Bi = bi;
+				scene.models[5].verts[scene.models[5].indexed[i + 1]].useNormalMap = 1.0f;
+				scene.models[5].verts[scene.models[5].indexed[i + 2]].tan = tan;
+				scene.models[5].verts[scene.models[5].indexed[i + 2]].Bi = bi;
+				scene.models[5].verts[scene.models[5].indexed[i + 2]].useNormalMap = 1.0f;
+			}
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[5].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[5].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[5].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[5].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[5].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[5].m_indexBuffer));
+			scene.models[5].offset = XMFLOAT3(-3, 1.37, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/handgun_C.dds", NULL, scene.models[5].m_texture.GetAddressOf());
+			HRESULT hs2 = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/handgun_N.dds", NULL, scene.models[5].m_normalMap.GetAddressOf());
+
+
+		}
+	});
+
+	auto m4createCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[6].loadOBJ("Assets/m4a1_s.obj"))
+		{
+			/*XMFLOAT3 tan;
+			XMFLOAT3 bi;
+
+			for (int i = 0; i < scene.models[6].indexed.size() - 2; i += 3)
+			{
+				scene.models[6].CalculateTangentBinormal(scene.models[6].verts[scene.models[6].indexed[i]], scene.models[6].verts[scene.models[6].indexed[i + 1]], scene.models[6].verts[scene.models[6].indexed[i + 2]], tan, bi);
+				scene.models[6].verts[scene.models[6].indexed[i]].tan = tan;
+				scene.models[6].verts[scene.models[6].indexed[i]].Bi = bi;
+				scene.models[6].verts[scene.models[6].indexed[i]].useNormalMap = 1.0f;
+				scene.models[6].verts[scene.models[6].indexed[i + 1]].tan = tan;
+				scene.models[6].verts[scene.models[6].indexed[i + 1]].Bi = bi;
+				scene.models[6].verts[scene.models[6].indexed[i + 1]].useNormalMap = 1.0f;
+				scene.models[6].verts[scene.models[6].indexed[i + 2]].tan = tan;
+				scene.models[6].verts[scene.models[6].indexed[i + 2]].Bi = bi;
+				scene.models[6].verts[scene.models[6].indexed[i + 2]].useNormalMap = 1.0f;
+			}*/
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[6].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[6].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[6].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[6].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[6].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[6].m_indexBuffer));
+			scene.models[6].offset = XMFLOAT3(-4.6, 1, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/noodas.dds", NULL, scene.models[6].m_texture.GetAddressOf());
+			//HRESULT hs2 = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/craters_NRM.dds", NULL, scene.models[6].m_normalMap.GetAddressOf());
+
+
+		}
+	});
+
+	auto Plane2createCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[7].loadOBJ("Assets/Plane.obj"))
+		{
+			XMFLOAT3 tan;
+			XMFLOAT3 bi;
+
+			scene.models[7].CalculateTangentBinormal(scene.models[7].verts[scene.models[7].indexed[0]], scene.models[7].verts[scene.models[7].indexed[1]], scene.models[7].verts[scene.models[7].indexed[2]], tan, bi);
+			for (int i = 0; i < scene.models[7].verts.size(); ++i)
+			{
+				scene.models[7].verts[i].tan = tan;
+				scene.models[7].verts[i].Bi = bi;
+				scene.models[7].verts[i].useNormalMap = 1.0f;
+			}
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[7].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[7].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[7].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[7].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[7].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[7].m_indexBuffer));
+			scene.models[7].offset = XMFLOAT3(16, -1.37, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Cobblestone.dds", NULL, scene.models[7].m_texture.GetAddressOf());
+			HRESULT hs2 = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Cobblestone_NRM.dds", NULL, scene.models[7].m_normalMap.GetAddressOf());
+
+
+		}
+	});
+
+	auto mooncreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[8].loadOBJ("Assets/UVball.obj"))
+		{
+			XMFLOAT3 tan;
+			XMFLOAT3 bi;
+
+			for (int i = 0; i < scene.models[8].indexed.size(); i += 3)
+			{
+				scene.models[8].CalculateTangentBinormal(scene.models[8].verts[scene.models[8].indexed[i]], scene.models[8].verts[scene.models[8].indexed[i + 1]], scene.models[8].verts[scene.models[8].indexed[i + 2]], tan, bi);
+				scene.models[8].verts[scene.models[8].indexed[i]].tan = tan;
+				scene.models[8].verts[scene.models[8].indexed[i]].Bi = bi;
+				scene.models[8].verts[scene.models[8].indexed[i]].useNormalMap = 1.0f;
+				scene.models[8].verts[scene.models[8].indexed[i + 1]].tan = tan;
+				scene.models[8].verts[scene.models[8].indexed[i + 1]].Bi = bi;
+				scene.models[8].verts[scene.models[8].indexed[i + 1]].useNormalMap = 1.0f;
+				scene.models[8].verts[scene.models[8].indexed[i + 2]].tan = tan;
+				scene.models[8].verts[scene.models[8].indexed[i + 2]].Bi = bi;
+				scene.models[8].verts[scene.models[8].indexed[i + 2]].useNormalMap = 1.0f;
+			}
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[8].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[8].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[8].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[8].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[8].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[8].m_indexBuffer));
+			scene.models[8].offset = XMFLOAT3(0, 4.3, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/craters.dds", NULL, scene.models[8].m_texture.GetAddressOf());
+			HRESULT hs2 = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/craters_NRM.dds", NULL, scene.models[8].m_normalMap.GetAddressOf());
+
+
 		}
 	});
 

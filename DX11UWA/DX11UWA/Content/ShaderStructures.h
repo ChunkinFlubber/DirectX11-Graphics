@@ -29,6 +29,9 @@ namespace DX11UWA
 		DirectX::XMFLOAT3 pos;
 		DirectX::XMFLOAT2 uvs;
 		DirectX::XMFLOAT3 normals;
+		DirectX::XMFLOAT3 tan;
+		DirectX::XMFLOAT3 Bi;
+		float useNormalMap;
 	};
 
 	struct DIRECTOIONALLIGHT

@@ -2,7 +2,9 @@
 
 texture2D Texture : register(t0); // first texture
 
-//texture2D detailTexture : register(t1); // second texture
+texture2D BumpMap : register(t1); // first texture
+
+texture2D SpecMap : register(t2); // first texture
 
 SamplerState Sampler : register(s0); // filter 0 using CLAMP, filter 1 using WRAP
 
@@ -13,6 +15,9 @@ struct PixelShaderInput
 	float3 normals : NORMAL;
 	float3 normalsw : WORLDNORM;
 	float3 posw : WORLDPOS;
+	float3 tan : TAN;
+	float3 bi : BI;
+	float useNormalMap : UNM;
 };
 
 cbuffer DirectionLight : register(b0)
@@ -42,21 +47,33 @@ float4 main(PixelShaderInput input) : SV_TARGET
 {
 	//return float4(input.uv, 1.0f);
 	float4 baseColor = Texture.Sample(Sampler, input.uv);// * modulate; // get base color
-	float d_r = saturate(dot(-dir_dir.xyz,input.normalsw));
+	float4 bumpMap;
+	float3 bumpNormal = input.normalsw;
+	if (input.useNormalMap == 1)
+	{
+		bumpMap = BumpMap.Sample(Sampler, input.uv);
+		bumpMap = (bumpMap * 2.0f) - 1.0f;
+		bumpNormal = (bumpMap.x * input.tan) + (bumpMap.y * input.bi) + (bumpMap.z * input.normalsw);
+		bumpNormal = normalize(bumpNormal);
+	}
+
+	float d_r = saturate(dot(-dir_dir.xyz,bumpNormal));
 	float3 dirlight = baseColor.xyz * dir_color.xyz * d_r;
 
 	float3 p_d = normalize(point_pos.xyz - input.posw);
-	float p_r = saturate(dot(p_d, input.normalsw));
+	float p_r = saturate(dot(p_d, bumpNormal));
 	float p_atten = 1 - saturate(length(point_pos.xyz - input.posw.xyz) / point_radious.x);
 	float3 pointlight = point_color.xyz * baseColor.xyz * p_r * p_atten;
 
 	float3 s_d = normalize(spot_pos.xyz - input.posw);
 	float s_sr = saturate(dot(-s_d.xyz, normalize(spot_coneD).xyz));
 	float s_sf = (s_sr > spot_coneR.x) ? 1 : 0;
-	float s_r = saturate(dot(s_d, input.normalsw));
+	float s_r = saturate(dot(s_d, bumpNormal));
 	float s_atten = 1.0 - saturate(length(spot_pos.xyz - input.posw.xyz) / spot_coneR.z);
 	float s_coneatten = 1.0 - saturate((spot_coneR.y - s_sr) / (spot_coneR.y - spot_coneR.x));
 	float3 spotlight = spot_color.xyz * baseColor.xyz * s_r * s_sf * (s_atten * s_coneatten);
+
+	
 
 	baseColor.xyz = saturate(dirlight.xyz + pointlight.xyz + ambiantlight.xyz + spotlight.xyz);
 	//float4 detailColor = detailTexture.Sample(filters[1], detailUV); // get detail effect

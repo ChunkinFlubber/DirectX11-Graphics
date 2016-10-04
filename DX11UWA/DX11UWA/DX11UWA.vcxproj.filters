@@ -122,7 +122,25 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\blue.dds">
+    <Image Include="Assets\handgun_C.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\handgun_N.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\craters.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\craters_NRM.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\noodas.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Cobblestone.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Cobblestone_NRM.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -133,6 +151,8 @@
     <None Include="DX11UWA_TemporaryKey.pfx" />
     <None Include="Assets\Plane.obj" />
     <None Include="Assets\Monkey.obj" />
+    <None Include="Assets\Ball.obj" />
+    <None Include="Assets\Cone.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SamplePixelShader.hlsl">
@@ -152,12 +172,17 @@
     <Media Include="Assets\grey.dds" />
     <Media Include="Assets\Red.dds" />
     <Media Include="Assets\tiles.dds" />
+    <Media Include="Assets\blue.dds" />
+    <Media Include="Assets\tiles_NRM.dds" />
   </ItemGroup>
   <ItemGroup>
-    <Object Include="Assets\Ball.obj">
+    <Object Include="Assets\Handgun_obj.obj">
       <Filter>Assets</Filter>
     </Object>
-    <Object Include="Assets\Cone.obj">
+    <Object Include="Assets\UVball.obj">
+      <Filter>Assets</Filter>
+    </Object>
+    <Object Include="Assets\m4a1_s.obj">
       <Filter>Assets</Filter>
     </Object>
   </ItemGroup>
