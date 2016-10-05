@@ -321,8 +321,6 @@ void Sample3DSceneRenderer::Render(void)
 
 		context->DrawIndexed(scene.models[i].indexed.size(), 0, 0);
 	}
-
-
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources(void)

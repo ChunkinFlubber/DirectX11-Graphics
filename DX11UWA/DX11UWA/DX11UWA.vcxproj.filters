@@ -61,9 +61,6 @@
     <ClCompile Include="pch.cpp">
       <Filter>Content\Source</Filter>
     </ClCompile>
-    <ClCompile Include="Common\DDSTextureLoader.cpp">
-      <Filter>Common\Source</Filter>
-    </ClCompile>
     <ClCompile Include="Common\DeviceResources.cpp">
       <Filter>Common\Source</Filter>
     </ClCompile>
@@ -73,7 +70,7 @@
     <ClCompile Include="Scene.cpp">
       <Filter>Content\Source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\Project Instructions\Step 7 - Take a look at Project Resources &amp; Helpers\Texture Loading Help\DDSTextureLoader.cpp">
+    <ClCompile Include="DDSTextureLoader.cpp">
       <Filter>Content\Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -96,9 +93,6 @@
     <ClInclude Include="pch.h">
       <Filter>Content\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Common\DDSTextureLoader.h">
-      <Filter>Common\Headers</Filter>
-    </ClInclude>
     <ClInclude Include="Common\DeviceResources.h">
       <Filter>Common\Headers</Filter>
     </ClInclude>
@@ -114,33 +108,12 @@
     <ClInclude Include="Scene.h">
       <Filter>Content\Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\Project Instructions\Step 7 - Take a look at Project Resources &amp; Helpers\Texture Loading Help\DDSTextureLoader.h">
+    <ClInclude Include="DDSTextureLoader.h">
       <Filter>Content\Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\handgun_C.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\handgun_N.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\craters.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\craters_NRM.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\noodas.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Cobblestone.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Cobblestone_NRM.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -153,6 +126,9 @@
     <None Include="Assets\Monkey.obj" />
     <None Include="Assets\Ball.obj" />
     <None Include="Assets\Cone.obj" />
+    <None Include="Assets\Handgun_obj.obj" />
+    <None Include="Assets\UVball.obj" />
+    <None Include="Assets\m4a1_s.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SamplePixelShader.hlsl">
@@ -174,16 +150,12 @@
     <Media Include="Assets\tiles.dds" />
     <Media Include="Assets\blue.dds" />
     <Media Include="Assets\tiles_NRM.dds" />
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="Assets\Handgun_obj.obj">
-      <Filter>Assets</Filter>
-    </Object>
-    <Object Include="Assets\UVball.obj">
-      <Filter>Assets</Filter>
-    </Object>
-    <Object Include="Assets\m4a1_s.obj">
-      <Filter>Assets</Filter>
-    </Object>
+    <Media Include="Assets\handgun_C.dds" />
+    <Media Include="Assets\handgun_N.dds" />
+    <Media Include="Assets\craters.dds" />
+    <Media Include="Assets\craters_NRM.dds" />
+    <Media Include="Assets\Cobblestone.dds" />
+    <Media Include="Assets\Cobblestone_NRM.dds" />
+    <Media Include="Assets\noodas.dds" />
   </ItemGroup>
 </Project>
