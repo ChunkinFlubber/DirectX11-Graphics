@@ -73,6 +73,15 @@ XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT4 vect)
 	return out;
 }
 
+XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT3 vect)
+{
+	XMFLOAT4 out;
+	out.x = matrix._11 * vect.x + matrix._12 * vect.y + matrix._13 * vect.z;
+	out.y = matrix._21 * vect.x + matrix._22 * vect.y + matrix._23 * vect.z;
+	out.z = matrix._31 * vect.x + matrix._32 * vect.y + matrix._33 * vect.z;
+	return out;
+}
+
 XMFLOAT4 LookAt(XMFLOAT4 pos, XMFLOAT4 look)
 {
 	XMFLOAT4 out;
@@ -104,12 +113,13 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	Static(scene.models[6].m_constantBufferData, scene.models[6].offset);
 	Static(scene.models[7].m_constantBufferData, scene.models[7].offset);
 	Static(scene.models[8].m_constantBufferData, scene.models[8].offset);
+	Static(scene.models[9].m_constantBufferData, scene.models[9].offset);
 	//Orbit(scene.models[6].m_constantBufferData, XMFLOAT3(0,Oradians,0),scene.models[6].offset, XMFLOAT3(0,0,0));
 	//make ball and cone obit
 	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
 	Orbit(scene.models[3].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[3].offset);
 	//attach lights to ball and cone
-	scene.pointlight.pos = MatrixByVector(scene.models[2].m_constantBufferData.model, scene.constPointPos);
+	scene.pointlight.pos = MatrixByVector(scene.models[2].m_constantBufferData.model, scene.models[2].offset);
 	scene.spotlight.pos = MatrixByVector(scene.models[3].m_constantBufferData.model, scene.constspotPos);
 	scene.dirlight.dir = LookAt(MatrixByVector(m_constantBufferData.model, XMFLOAT4(3, 8, 0, 0)), XMFLOAT4(0, 0, 0, 0));
 	//redirect spotlight
@@ -430,6 +440,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	Object m4;
 	Object cobble;
 	Object moon;
+	Object CTree;
 	scene.models.push_back(plane);
 	scene.models.push_back(monkey);
 	scene.models.push_back(ball);
@@ -439,6 +450,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	scene.models.push_back(m4);
 	scene.models.push_back(cobble);
 	scene.models.push_back(moon);
+	scene.models.push_back(CTree);
 
 	CD3D11_BUFFER_DESC DirconstantBufferDesc(sizeof(DIRECTOIONALLIGHT), D3D11_BIND_CONSTANT_BUFFER);
 	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&DirconstantBufferDesc, nullptr, &scene.m_dirConstBuffer));
@@ -797,6 +809,31 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/craters.dds", NULL, scene.models[8].m_texture.GetAddressOf());
 			HRESULT hs2 = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/craters_NRM.dds", NULL, scene.models[8].m_normalMap.GetAddressOf());
+
+
+		}
+	});
+
+	auto CTreecreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[9].loadOBJ("Assets/cherry.obj"))
+		{
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[9].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[9].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.models[9].m_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[9].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[9].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.models[9].m_indexBuffer));
+			scene.models[9].offset = XMFLOAT3(15, -1.5, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/cherry.dds", NULL, scene.models[9].m_texture.GetAddressOf());
 
 
 		}

@@ -47,6 +47,8 @@ cbuffer SpotLight : register(b2)
 float4 main(PixelShaderInput input) : SV_TARGET
 {
 	float4 baseColor = Texture.Sample(Sampler, input.uv);// * modulate; // get base color
+	if (baseColor.a < 0.5)
+		discard;
 	float4 bumpMap;
 	float3 bumpNormal = input.normalsw;
 	if (input.useNormalMap == 1)
@@ -60,29 +62,29 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	float3 tocam = normalize(input.eyepos - input.posw);
 
 	float3 todirlight = normalize(-dir_dir - input.posw);
-	float3 dirRef = reflect(-tocam, input.normalsw);
+	float3 dirRef = reflect(-tocam, bumpNormal);
 	float ddirRef = max(0,dot(dirRef, todirlight));
-	float dirspecPow = pow(ddirRef, 20);
+	float dirspecPow = pow(ddirRef, 128);
 
 	float3 topointlight = normalize(point_pos - input.posw);
-	float3 pointRef = reflect(-tocam, input.normalsw);
+	float3 pointRef = reflect(-tocam, bumpNormal);
 	float dpointRef = max(0, dot(pointRef, topointlight));
-	float pointspecPow = pow(dpointRef, 20);
+	float pointspecPow = pow(dpointRef, 32);
 
 	float3 tospotlight = normalize(spot_pos - input.posw);
-	float3 spotRef = reflect(-tocam, input.normalsw);
+	float3 spotRef = reflect(-tocam, bumpNormal);
 	float dspotRef = max(0, dot(spotRef, tospotlight));
-	float spotspecPow = pow(dspotRef, 20);
+	float spotspecPow = pow(dspotRef, 16);
 
 	float d_r = saturate(dot(-dir_dir.xyz,bumpNormal));
 	float3 dirlight = baseColor.xyz * dir_color.xyz * d_r;
-	float3 dirlightSpec = baseColor * dir_color * dirspecPow;
+	float3 dirlightSpec = dir_color * dirspecPow;
 
 	float3 p_d = normalize(point_pos.xyz - input.posw);
 	float p_r = saturate(dot(p_d, bumpNormal));
 	float p_atten = 1 - saturate(length(point_pos.xyz - input.posw.xyz) / point_radious.x);
 	float3 pointlight = point_color.xyz * baseColor.xyz * p_r * p_atten;
-	float3 pointSpec = pointspecPow * point_color * baseColor;
+	float3 pointSpec = pointspecPow * point_color;
 
 	float3 s_d = normalize(spot_pos.xyz - input.posw);
 	float s_sr = saturate(dot(-s_d.xyz, normalize(spot_coneD).xyz));
@@ -91,7 +93,7 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	float s_atten = 1.0 - saturate(length(spot_pos.xyz - input.posw.xyz) / spot_coneR.z);
 	float s_coneatten = 1.0 - saturate((spot_coneR.y - s_sr) / (spot_coneR.y - spot_coneR.x));
 	float3 spotlight = spot_color.xyz * baseColor.xyz * s_r * s_sf * (s_atten * s_coneatten);
-	float3 spotlightspec = baseColor * spot_color * spotspecPow;
+	float3 spotlightspec = spot_color * spotspecPow;
 
 	
 

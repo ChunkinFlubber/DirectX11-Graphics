@@ -116,6 +116,9 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\cherry.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -157,5 +160,10 @@
     <Media Include="Assets\Cobblestone.dds" />
     <Media Include="Assets\Cobblestone_NRM.dds" />
     <Media Include="Assets\noodas.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="Assets\cherry.obj">
+      <Filter>Assets</Filter>
+    </Object>
   </ItemGroup>
 </Project>
