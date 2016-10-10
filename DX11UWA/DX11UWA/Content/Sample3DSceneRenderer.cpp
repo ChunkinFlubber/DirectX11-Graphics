@@ -106,7 +106,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	Static(scene.models[8].m_constantBufferData, scene.models[8].offset);
 	//Orbit(scene.models[6].m_constantBufferData, XMFLOAT3(0,Oradians,0),scene.models[6].offset, XMFLOAT3(0,0,0));
 	//make ball and cone obit
-	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians + tan(timer.GetTotalSeconds()), 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
+	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
 	Orbit(scene.models[3].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[3].offset);
 	//attach lights to ball and cone
 	scene.pointlight.pos = MatrixByVector(scene.models[2].m_constantBufferData.model, scene.constPointPos);
@@ -213,6 +213,7 @@ void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const
 			m_camera._43 = pos.z;
 		}
 		m_prevMousePos = m_currMousePos;
+		m_constantBufferData.eyepos = XMFLOAT4(m_camera._41, m_camera._42, m_camera._43, m_camera._44);
 	}
 
 
@@ -306,6 +307,7 @@ void Sample3DSceneRenderer::Render(void)
 	{
 		scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
 		scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
+		scene.models[i].m_constantBufferData.eyepos = m_constantBufferData.eyepos;
 		context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &scene.models[i].m_constantBufferData, 0, 0, 0);
 
 		stride = sizeof(VERTEX);

@@ -4,6 +4,7 @@ cbuffer ModelViewProjectionConstantBuffer : register(b0)
 	matrix model;
 	matrix view;
 	matrix projection;
+	float4 eyepos;
 };
 
 // Per-vertex data used as input to the vertex shader.
@@ -14,7 +15,6 @@ struct VertexShaderInput
 	float3 normals : NORMAL;
 	float3 tan : TAN;
 	float3 bi : BI;
-	//float3 eyepos : EYE;
 	float useNormalMap : UNM;
 };
 
@@ -28,7 +28,7 @@ struct PixelShaderInput
 	float3 posw : WORLDPOS;
 	float3 tan : TAN;
 	float3 bi : BI;
-	//float3 eyepos : EYE;
+	float3 eyepos : EYE;
 	float useNormalMap : UNM;
 };
 
@@ -42,7 +42,7 @@ PixelShaderInput main(VertexShaderInput input)
 	pos = mul(pos, model);
 	output.posw = pos.xyz;
 	output.normalsw = normalize(mul(input.normals, model));
-	//output.eyepos = input.eyepos;
+	output.eyepos = mul(eyepos, model);
 	pos = mul(pos, view);
 	pos = mul(pos, projection);
 	output.pos = pos;

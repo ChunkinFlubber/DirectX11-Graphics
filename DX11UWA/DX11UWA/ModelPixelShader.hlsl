@@ -17,6 +17,7 @@ struct PixelShaderInput
 	float3 posw : WORLDPOS;
 	float3 tan : TAN;
 	float3 bi : BI;
+	float3 eyepos : EYE;
 	float useNormalMap : UNM;
 };
 
@@ -45,7 +46,6 @@ cbuffer SpotLight : register(b2)
 // A pass-through function for the (interpolated) color data.
 float4 main(PixelShaderInput input) : SV_TARGET
 {
-	//return float4(input.uv, 1.0f);
 	float4 baseColor = Texture.Sample(Sampler, input.uv);// * modulate; // get base color
 	float4 bumpMap;
 	float3 bumpNormal = input.normalsw;
@@ -57,13 +57,32 @@ float4 main(PixelShaderInput input) : SV_TARGET
 		bumpNormal = normalize(bumpNormal);
 	}
 
+	float3 tocam = normalize(input.eyepos - input.posw);
+
+	float3 todirlight = normalize(-dir_dir - input.posw);
+	float3 dirRef = reflect(-tocam, input.normalsw);
+	float ddirRef = max(0,dot(dirRef, todirlight));
+	float dirspecPow = pow(ddirRef, 20);
+
+	float3 topointlight = normalize(point_pos - input.posw);
+	float3 pointRef = reflect(-tocam, input.normalsw);
+	float dpointRef = max(0, dot(pointRef, topointlight));
+	float pointspecPow = pow(dpointRef, 20);
+
+	float3 tospotlight = normalize(spot_pos - input.posw);
+	float3 spotRef = reflect(-tocam, input.normalsw);
+	float dspotRef = max(0, dot(spotRef, tospotlight));
+	float spotspecPow = pow(dspotRef, 20);
+
 	float d_r = saturate(dot(-dir_dir.xyz,bumpNormal));
 	float3 dirlight = baseColor.xyz * dir_color.xyz * d_r;
+	float3 dirlightSpec = baseColor * dir_color * dirspecPow;
 
 	float3 p_d = normalize(point_pos.xyz - input.posw);
 	float p_r = saturate(dot(p_d, bumpNormal));
 	float p_atten = 1 - saturate(length(point_pos.xyz - input.posw.xyz) / point_radious.x);
 	float3 pointlight = point_color.xyz * baseColor.xyz * p_r * p_atten;
+	float3 pointSpec = pointspecPow * point_color * baseColor;
 
 	float3 s_d = normalize(spot_pos.xyz - input.posw);
 	float s_sr = saturate(dot(-s_d.xyz, normalize(spot_coneD).xyz));
@@ -72,10 +91,11 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	float s_atten = 1.0 - saturate(length(spot_pos.xyz - input.posw.xyz) / spot_coneR.z);
 	float s_coneatten = 1.0 - saturate((spot_coneR.y - s_sr) / (spot_coneR.y - spot_coneR.x));
 	float3 spotlight = spot_color.xyz * baseColor.xyz * s_r * s_sf * (s_atten * s_coneatten);
+	float3 spotlightspec = baseColor * spot_color * spotspecPow;
 
 	
 
-	baseColor.xyz = saturate(dirlight.xyz + pointlight.xyz + ambiantlight.xyz + spotlight.xyz);
+	baseColor.xyz = saturate(dirlight.xyz + pointlight.xyz + ambiantlight.xyz + spotlight.xyz + dirlightSpec + pointSpec + spotlightspec);
 	//float4 detailColor = detailTexture.Sample(filters[1], detailUV); // get detail effect
 	//float4 finalColor = float4(lerp(baseColor.rgb, detailColor.rgb, detailColor.a), baseColor.a);
 	return baseColor; // return a transition based on the detail alpha

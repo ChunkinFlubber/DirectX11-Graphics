@@ -320,7 +320,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 		// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
 		// ensures that the application will only render after each VSync, minimizing power consumption.
 		DX::ThrowIfFailed(
-			dxgiDevice->SetMaximumFrameLatency(0)
+			dxgiDevice->SetMaximumFrameLatency(1)
 			);
 	}
 
