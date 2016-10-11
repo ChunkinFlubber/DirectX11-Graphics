@@ -116,9 +116,6 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\cherry.dds">
-      <Filter>Assets</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -132,6 +129,7 @@
     <None Include="Assets\Handgun_obj.obj" />
     <None Include="Assets\UVball.obj" />
     <None Include="Assets\m4a1_s.obj" />
+    <None Include="Assets\cherry.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SamplePixelShader.hlsl">
@@ -144,6 +142,12 @@
       <Filter>Content\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="ModelVertexShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GeometryShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GeoVertexShader.hlsl">
       <Filter>Content\Shaders</Filter>
     </FxCompile>
   </ItemGroup>
@@ -160,10 +164,6 @@
     <Media Include="Assets\Cobblestone.dds" />
     <Media Include="Assets\Cobblestone_NRM.dds" />
     <Media Include="Assets\noodas.dds" />
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="Assets\cherry.obj">
-      <Filter>Assets</Filter>
-    </Object>
+    <Media Include="Assets\cherry.dds" />
   </ItemGroup>
 </Project>
