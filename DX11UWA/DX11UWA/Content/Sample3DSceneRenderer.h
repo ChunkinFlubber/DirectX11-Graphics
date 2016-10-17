@@ -38,6 +38,9 @@ namespace DX11UWA
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_GeovertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11GeometryShader>	m_GeoShader;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_GeoVShader;
 
 		// Direct3D resources for cube geometry.
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
@@ -51,6 +54,7 @@ namespace DX11UWA
 
 		// System resources for cube geometry.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
+		ModelViewProjectionConstantBuffer	m_GeoconstantBufferData;
 		uint32	m_indexCount;
 
 		// Variables used with the rendering loop.

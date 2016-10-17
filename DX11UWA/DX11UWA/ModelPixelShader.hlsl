@@ -84,7 +84,7 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	float p_r = saturate(dot(p_d, bumpNormal));
 	float p_atten = 1 - saturate(length(point_pos.xyz - input.posw.xyz) / point_radious.x);
 	float3 pointlight = point_color.xyz * baseColor.xyz * p_r * p_atten;
-	float3 pointSpec = pointspecPow * point_color;
+	float3 pointSpec = pointspecPow * point_color * p_atten;
 
 	float3 s_d = normalize(spot_pos.xyz - input.posw);
 	float s_sr = saturate(dot(-s_d.xyz, normalize(spot_coneD).xyz));
@@ -93,7 +93,7 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	float s_atten = 1.0 - saturate(length(spot_pos.xyz - input.posw.xyz) / spot_coneR.z);
 	float s_coneatten = 1.0 - saturate((spot_coneR.y - s_sr) / (spot_coneR.y - spot_coneR.x));
 	float3 spotlight = spot_color.xyz * baseColor.xyz * s_r * s_sf * (s_atten * s_coneatten);
-	float3 spotlightspec = spot_color * spotspecPow;
+	float3 spotlightspec = spot_color * spotspecPow * s_atten;
 
 	
 

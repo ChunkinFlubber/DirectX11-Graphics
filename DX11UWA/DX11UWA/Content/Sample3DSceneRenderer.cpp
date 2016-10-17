@@ -119,15 +119,15 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	Orbit(scene.models[2].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[2].offset);
 	Orbit(scene.models[3].m_constantBufferData, XMFLOAT3(0, Oradians, 0), XMFLOAT3(0, 0, 0), scene.models[3].offset);
 	//attach lights to ball and cone
-	scene.pointlight.pos = MatrixByVector(scene.models[2].m_constantBufferData.model, scene.models[2].offset);
-	scene.spotlight.pos = MatrixByVector(scene.models[3].m_constantBufferData.model, scene.constspotPos);
+	scene.pointlight.pos = XMFLOAT4(scene.models[2].m_constantBufferData.model._14, scene.models[2].m_constantBufferData.model._24, scene.models[2].m_constantBufferData.model._34, scene.models[2].m_constantBufferData.model._44); //MatrixByVector(scene.models[2].m_constantBufferData.model, scene.models[2].offset);
+	scene.spotlight.pos = XMFLOAT4(scene.models[3].m_constantBufferData.model._14, scene.models[3].m_constantBufferData.model._24, scene.models[3].m_constantBufferData.model._34, scene.models[3].m_constantBufferData.model._44); //MatrixByVector(scene.models[3].m_constantBufferData.model, scene.constspotPos);
 	scene.dirlight.dir = LookAt(MatrixByVector(m_constantBufferData.model, XMFLOAT4(3, 8, 0, 0)), XMFLOAT4(0, 0, 0, 0));
 	//redirect spotlight
 	scene.spotlight.coneDir = LookAt(scene.spotlight.pos, XMFLOAT4(0, 0, 0, 0));
 
 	// Update or move camera here
 	UpdateCamera(timer, 7.0f, 1.75f);
-
+	m_constantBufferData.eyepos = XMFLOAT4(m_camera._41, m_camera._42, m_camera._43, m_camera._44);
 }
 
 // Rotate the 3D cube model a set amount of radians.
@@ -223,7 +223,6 @@ void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const
 			m_camera._43 = pos.z;
 		}
 		m_prevMousePos = m_currMousePos;
-		m_constantBufferData.eyepos = XMFLOAT4(m_camera._41, m_camera._42, m_camera._43, m_camera._44);
 	}
 
 
@@ -276,9 +275,15 @@ void Sample3DSceneRenderer::Render(void)
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
+
+
+	////////////////////////////////////////////////////////////Render to Texture////////////////////////////////////////////////////////
+	context->OMSetRenderTargets(1, scene.m_RTV.GetAddressOf(), scene.m_DSV.Get());
+	float color[4] = { 0.3,0.3,0.6,1 };
+	context->ClearRenderTargetView(scene.m_RTV.Get(), color);
+	context->ClearDepthStencilView(scene.m_DSV.Get(), D3D11_CLEAR_DEPTH, 1, NULL);
 	
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_camera))));
-
 
 	// Prepare the constant buffer to send it to the graphics device.
 	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
@@ -298,6 +303,27 @@ void Sample3DSceneRenderer::Render(void)
 	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 	// Draw the objects.
 	context->DrawIndexed(m_indexCount, 0, 0);
+
+	m_GeoconstantBufferData.view = m_constantBufferData.view;
+	m_GeoconstantBufferData.projection = m_constantBufferData.projection;
+	XMStoreFloat4x4(&m_GeoconstantBufferData.model, XMMatrixTranspose(XMMatrixTranslation(0,0,0)));
+
+	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_GeoconstantBufferData, 0, 0, 0);
+
+	stride = sizeof(VertexPositionColor);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, m_GeovertexBuffer.GetAddressOf(), &stride, &offset);
+	context->IASetInputLayout(m_inputLayout.Get());
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+	context->VSSetShader(m_GeoVShader.Get(), nullptr, 0);
+	// Send the constant buffer to the graphics device.
+	context->GSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	// Attach our pixel shader.
+	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+	context->GSSetShader(m_GeoShader.Get(), nullptr, 0);
+	context->Draw(1, 0);
+	context->GSSetShader(nullptr, nullptr, 0);
+
 
 	//////////////////////////////RENDER My Stuff
 
@@ -333,6 +359,122 @@ void Sample3DSceneRenderer::Render(void)
 
 		context->DrawIndexed(scene.models[i].indexed.size(), 0, 0);
 	}
+
+	context->VSSetShader(scene.Sky_vertexShader.Get(), nullptr, 0);
+	context->PSSetShader(scene.Sky_pixelShader.Get(), nullptr, 0);
+	context->PSSetSamplers(0, 1, scene.m_SamplerState.GetAddressOf());
+	context->IASetInputLayout(scene.m_inputLayout.Get());
+	scene.Sky_constantBufferData = m_constantBufferData;
+	XMStoreFloat4x4(&scene.Sky_constantBufferData.model, XMMatrixIdentity());
+	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &scene.Sky_constantBufferData, 0, 0, 0);
+	context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	context->PSSetShaderResources(0, 1, scene.Sky_texture.GetAddressOf());
+	stride = sizeof(VERTEX);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, scene.Sky_vertexBuffer.GetAddressOf(), &stride, &offset);
+	context->IASetIndexBuffer(scene.Sky_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	context->DrawIndexed(scene.models[10].indexed.size(), 0, 0);
+
+	/////////////////////////////////////////////Render Scene to Screen//////////////////////////////////
+	scene.m_SRV1 = scene.m_SRV;
+	ID3D11RenderTargetView *const targets[1] = { m_deviceResources->GetBackBufferRenderTargetView() };
+	context->OMSetRenderTargets(1, targets, m_deviceResources->GetDepthStencilView());
+
+	// Prepare the constant buffer to send it to the graphics device.
+	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
+	// Each vertex is one instance of the VertexPositionColor struct.
+	stride = sizeof(VertexPositionColor);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
+	// Each index is one 16-bit unsigned integer (short).
+	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->IASetInputLayout(m_inputLayout.Get());
+	// Attach our vertex shader.
+	context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
+	// Send the constant buffer to the graphics device.
+	context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	// Attach our pixel shader.
+	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+	// Draw the objects.
+	context->DrawIndexed(m_indexCount, 0, 0);
+
+	m_GeoconstantBufferData.view = m_constantBufferData.view;
+	m_GeoconstantBufferData.projection = m_constantBufferData.projection;
+	XMStoreFloat4x4(&m_GeoconstantBufferData.model, XMMatrixTranspose(XMMatrixTranslation(0, 0, 0)));
+
+	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_GeoconstantBufferData, 0, 0, 0);
+
+	stride = sizeof(VertexPositionColor);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, m_GeovertexBuffer.GetAddressOf(), &stride, &offset);
+	context->IASetInputLayout(m_inputLayout.Get());
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+	context->VSSetShader(m_GeoVShader.Get(), nullptr, 0);
+	// Send the constant buffer to the graphics device.
+	context->GSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	// Attach our pixel shader.
+	context->PSSetShader(scene.Cam_pixelShader.Get(), nullptr, 0);
+	context->GSSetShader(m_GeoShader.Get(), nullptr, 0);
+	context->PSSetSamplers(0, 1, scene.m_SamplerState.GetAddressOf());
+	context->PSSetShaderResources(0, 1, scene.m_SRV.GetAddressOf());
+	context->Draw(1, 0);
+	context->GSSetShader(nullptr, nullptr, 0);
+
+
+	//////////////////////////////RENDER My Stuff
+
+	context->VSSetShader(scene.m_vertexShader.Get(), nullptr, 0);
+	context->PSSetShader(scene.m_pixelShader.Get(), nullptr, 0);
+	context->PSSetSamplers(0, 1, scene.m_SamplerState.GetAddressOf());
+	context->IASetInputLayout(scene.m_inputLayout.Get());
+
+	context->PSSetConstantBuffers1(0, 1, scene.m_dirConstBuffer.GetAddressOf(), nullptr, nullptr);
+	context->UpdateSubresource1(scene.m_dirConstBuffer.Get(), 0, NULL, &scene.dirlight, 0, 0, 0);
+	context->PSSetConstantBuffers1(1, 1, scene.m_pointConstBuffer.GetAddressOf(), nullptr, nullptr);
+	context->UpdateSubresource1(scene.m_pointConstBuffer.Get(), 0, NULL, &scene.pointlight, 0, 0, 0);
+	context->PSSetConstantBuffers1(2, 1, scene.m_spotConstBuffer.GetAddressOf(), nullptr, nullptr);
+	context->UpdateSubresource1(scene.m_spotConstBuffer.Get(), 0, NULL, &scene.spotlight, 0, 0, 0);
+
+	for (unsigned int i = 0; i < scene.models.size(); ++i)
+	{
+		scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
+		scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
+		scene.models[i].m_constantBufferData.eyepos = m_constantBufferData.eyepos;
+		context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &scene.models[i].m_constantBufferData, 0, 0, 0);
+
+		stride = sizeof(VERTEX);
+		offset = 0;
+		context->IASetVertexBuffers(0, 1, scene.models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
+
+		context->IASetIndexBuffer(scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+		context->PSSetShaderResources(0, 1, scene.models[i].m_texture.GetAddressOf());
+		context->PSSetShaderResources(1, 1, scene.models[i].m_normalMap.GetAddressOf());
+
+		context->DrawIndexed(scene.models[i].indexed.size(), 0, 0);
+	}
+
+	context->VSSetShader(scene.Sky_vertexShader.Get(), nullptr, 0);
+	context->PSSetShader(scene.Sky_pixelShader.Get(), nullptr, 0);
+	context->PSSetSamplers(0, 1, scene.m_SamplerState.GetAddressOf());
+	context->IASetInputLayout(scene.m_inputLayout.Get());
+	scene.Sky_constantBufferData = m_constantBufferData;
+	XMStoreFloat4x4(&scene.Sky_constantBufferData.model, XMMatrixIdentity());
+	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &scene.Sky_constantBufferData, 0, 0, 0);
+	context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	context->PSSetShaderResources(0, 1, scene.Sky_texture.GetAddressOf());
+	stride = sizeof(VERTEX);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, scene.Sky_vertexBuffer.GetAddressOf(), &stride, &offset);
+	context->IASetIndexBuffer(scene.Sky_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	context->DrawIndexed(scene.models[10].indexed.size(), 0, 0);
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
@@ -340,6 +482,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	// Load shaders asynchronously.
 	auto loadVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso");
 	auto loadPSTask = DX::ReadDataAsync(L"SamplePixelShader.cso");
+	auto loadVSGeoTask = DX::ReadDataAsync(L"GeoVertexShader.cso");
+	auto loadGeoTask = DX::ReadDataAsync(L"GeometryShader.cso");
+	auto loadVSSkyTask = DX::ReadDataAsync(L"SkyVertexShader.cso");
+	auto loadPSSkyTask = DX::ReadDataAsync(L"SkyPixelShader.cso");
+	auto loadPSCamTask = DX::ReadDataAsync(L"CamPixelShader.cso");
 
 	// After the vertex shader file is loaded, create the shader and input layout.
 	auto createVSTask = loadVSTask.then([this](const std::vector<byte>& fileData)
@@ -355,6 +502,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_inputLayout));
 	});
 
+	auto createGeoVSTask = loadVSGeoTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &m_GeoVShader));
+	});
+
 	// After the pixel shader file is loaded, create the shader and constant buffer.
 	auto createPSTask = loadPSTask.then([this](const std::vector<byte>& fileData)
 	{
@@ -362,6 +514,26 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_constantBuffer));
+	});
+
+	auto createPSCamTask = loadPSCamTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &scene.Cam_pixelShader));
+	});
+
+	auto createVSSkyTask = loadVSSkyTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &scene.Sky_vertexShader));
+	});
+
+	auto createPSSkyTask = loadPSSkyTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &scene.Sky_pixelShader));
+	});
+
+	auto createGSTask = loadGeoTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGeometryShader(&fileData[0], fileData.size(), nullptr, &m_GeoShader));
 	});
 
 	// Once both shaders are loaded, create the mesh.
@@ -429,7 +601,51 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		m_loadingComplete = true;
 	});
 
+	auto createGeoTask = (createPSTask && createVSTask).then([this]()
+	{
+		// Load mesh vertices. Each vertex has a position and a color.
+		static const VertexPositionColor cubeVertices = { XMFLOAT3(0, 0, -4), XMFLOAT3(0.0f, 0.0f, 0.0f) };
+			
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+		vertexBufferData.pSysMem = &cubeVertices;
+		vertexBufferData.SysMemPitch = 0;
+		vertexBufferData.SysMemSlicePitch = 0;
+		CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(cubeVertices), D3D11_BIND_VERTEX_BUFFER);
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_GeovertexBuffer));
+	});
+
 	//////////////////////////////////////////////////////////////Load My Stuff
+
+	D3D11_TEXTURE2D_DESC textureDesc;
+	textureDesc.Width = m_deviceResources->GetOutputSize().Width;
+	textureDesc.Height = m_deviceResources->GetOutputSize().Height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = 0;
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateTexture2D(&textureDesc, NULL, scene.m_RTT.GetAddressOf()));
+	D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
+	renderTargetViewDesc.Format = textureDesc.Format;
+	renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	renderTargetViewDesc.Texture2D.MipSlice = 0;
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateRenderTargetView(scene.m_RTT.Get(), &renderTargetViewDesc, scene.m_RTV.GetAddressOf()));
+	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+	shaderResourceViewDesc.Format = textureDesc.Format;
+	shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+	shaderResourceViewDesc.Texture2D.MipLevels = 1;
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateShaderResourceView(scene.m_RTT.Get(),&shaderResourceViewDesc,scene.m_SRV.GetAddressOf()));
+	CD3D11_TEXTURE2D_DESC depthStencilDesc(DXGI_FORMAT_D24_UNORM_S8_UINT,lround(m_deviceResources->GetOutputSize().Width),lround(m_deviceResources->GetOutputSize().Height),1, 1, D3D11_BIND_DEPTH_STENCIL);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateTexture2D(&depthStencilDesc,nullptr,&scene.m_DSTX));
+
+	CD3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc(D3D11_DSV_DIMENSION_TEXTURE2D);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateDepthStencilView(scene.m_DSTX.Get(),&depthStencilViewDesc,&scene.m_DSV));
 
 	Object plane;
 	Object monkey;
@@ -441,6 +657,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	Object cobble;
 	Object moon;
 	Object CTree;
+	Object Sky;
 	scene.models.push_back(plane);
 	scene.models.push_back(monkey);
 	scene.models.push_back(ball);
@@ -451,6 +668,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	scene.models.push_back(cobble);
 	scene.models.push_back(moon);
 	scene.models.push_back(CTree);
+	scene.models.push_back(Sky);
 
 	CD3D11_BUFFER_DESC DirconstantBufferDesc(sizeof(DIRECTOIONALLIGHT), D3D11_BIND_CONSTANT_BUFFER);
 	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&DirconstantBufferDesc, nullptr, &scene.m_dirConstBuffer));
@@ -520,6 +738,31 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	});
 
 	// Once both shaders are loaded, create the mesh.
+
+	auto SkycreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
+	{
+		if (scene.models[10].loadOBJ("Assets/SkyBox.obj"))
+		{
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = scene.models[10].verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VERTEX) * scene.models[10].verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &scene.Sky_vertexBuffer));
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = scene.models[10].indexed.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * scene.models[10].indexed.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &scene.Sky_indexBuffer));
+			scene.models[10].offset = XMFLOAT3(0, 0, 0);
+
+			HRESULT hs = CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Cubemap.dds", NULL, &scene.Sky_texture);
+		}
+	});
+
 	auto PlanecreateCubeTask = (ScenecreatePSTask && ScenecreateVSTask).then([this]()
 	{
 		if (scene.models[0].loadOBJ("Assets/Plane.obj"))

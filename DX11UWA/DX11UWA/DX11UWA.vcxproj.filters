@@ -130,6 +130,7 @@
     <None Include="Assets\UVball.obj" />
     <None Include="Assets\m4a1_s.obj" />
     <None Include="Assets\cherry.obj" />
+    <None Include="Assets\SkyBox.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\SamplePixelShader.hlsl">
@@ -150,6 +151,15 @@
     <FxCompile Include="GeoVertexShader.hlsl">
       <Filter>Content\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="SkyVertexShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="SkyPixelShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="CamPixelShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Media Include="Assets\grey.dds" />
@@ -165,5 +175,6 @@
     <Media Include="Assets\Cobblestone_NRM.dds" />
     <Media Include="Assets\noodas.dds" />
     <Media Include="Assets\cherry.dds" />
+    <Media Include="Assets\Cubemap.dds" />
   </ItemGroup>
 </Project>
