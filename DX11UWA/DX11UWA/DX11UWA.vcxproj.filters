@@ -116,6 +116,15 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\Glass.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\GlassS.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\fog.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -158,6 +167,9 @@
       <Filter>Content\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="CamPixelShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="InVertexShader.hlsl">
       <Filter>Content\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

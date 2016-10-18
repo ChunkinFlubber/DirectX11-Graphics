@@ -50,6 +50,10 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 
+		float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		UINT sampleMask = 0xffffffff;
+		Microsoft::WRL::ComPtr<ID3D11BlendState> BlendState;
+
 		Scene scene;
 
 		// System resources for cube geometry.

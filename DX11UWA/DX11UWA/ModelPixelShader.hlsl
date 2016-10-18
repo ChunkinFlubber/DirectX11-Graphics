@@ -47,7 +47,7 @@ cbuffer SpotLight : register(b2)
 float4 main(PixelShaderInput input) : SV_TARGET
 {
 	float4 baseColor = Texture.Sample(Sampler, input.uv);// * modulate; // get base color
-	if (baseColor.a < 0.5)
+	if (baseColor.a < 0.25)
 		discard;
 	float4 bumpMap;
 	float3 bumpNormal = input.normalsw;

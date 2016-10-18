@@ -11,6 +11,14 @@ namespace DX11UWA
 		DirectX::XMFLOAT4 eyepos;
 	};
 
+	struct ModelViewProjectionConstantBuffer2
+	{
+		DirectX::XMFLOAT4X4 model[3];
+		DirectX::XMFLOAT4X4 view;
+		DirectX::XMFLOAT4X4 projection;
+		DirectX::XMFLOAT4 eyepos;
+	};
+
 	// Used to send per-vertex data to the vertex shader.
 	struct VertexPositionColor
 	{

@@ -21,6 +21,10 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>	m_SRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>	m_SRV1;
 
+	Microsoft::WRL::ComPtr<ID3D11Buffer>		In_ConstBuffer;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader>	In_vertexShader;
+	DX11UWA::ModelViewProjectionConstantBuffer2 In_ConstBufferData;
+
 	Microsoft::WRL::ComPtr<ID3D11SamplerState>  Sky_Sampler;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader>	Sky_vertexShader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	Cam_pixelShader;
